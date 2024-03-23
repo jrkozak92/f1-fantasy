@@ -13,6 +13,68 @@ const App = () => {
     return true
   }
 
+  const constructors = {
+    red_bull: {
+      drivers: ["VER", "PER"]
+    },
+    ferrari: {
+      drivers: ["SAI", "LEC"]
+    },
+    mercedes: {
+      drivers: ["HAM", "RUS"]
+    },
+    mclaren: {
+      drivers: ["PIA", "NOR"]
+    },
+    aston_martin: {
+      drivers: ["ALO", "STR"]
+    },
+    sauber: {
+      drivers: ["BOT", "ZHO"]
+    },
+    haas: {
+      drivers: ["MAG", "HUL"]
+    },
+    rb: {
+      drivers: ["RIC", "TSU"]
+    },
+    williams: {
+      drivers: ["ALB", "SAR"]
+    },
+    alpine: {
+      drivers: ["OCO", "GAS"]
+    }
+  }
+
+  const fantasyTeams = {
+    brad: {
+      drivers: ["RUS", "HAM", "ZHO", "STR"]
+    },
+    devin: {
+      drivers: ["VER", "OCO", "MAG", "GAS"]
+    },
+    darren: {
+      drivers: ["RIC", "ALO", "SAR", "PER"]
+    },
+    derrick: {
+      drivers: ["ALB", "SAI", "NOR", "BOT"]
+    },
+    joey: {
+      drivers: ["HUL", "LEC", "TSU", "PIA"]
+    }
+  }
+
+  // define constructors
+  // check drivers' constructor/name included in constructors[teamName].drivers
+  // if driver not in their constructor's drivers
+    // flag as sub on team
+    // see who's missing, flag as out of team
+    // map sub to missing driver
+
+  const checkForSubs = () => {
+    // run per session after data grabs during points summation calulation for teams
+  }
+
   const getRaceResults = async () => {
     const response = await fetch("https://ergast.com/api/f1/2024/results.json?limit=480").then((res) => {
       return res.json()
@@ -68,6 +130,7 @@ const App = () => {
   }
 
   const calcPoints = (driver) => {
+    
     return (11 - driver.position) * 2
   }
 
@@ -105,6 +168,27 @@ const App = () => {
     await getRaceResults()
   }
 
+  const printStandings = () => {
+    const rows = []
+    for (const driver in standings){
+        rows.push(
+          <tr>
+            <td>{driver}</td>
+            <td>{standings[driver]}</td>
+          </tr>
+        )
+    }
+    return (
+      <table>
+        <thead>
+          <th>Driver</th>
+          <th>Points</th>
+        </thead>
+        {...rows}
+      </table>
+    )
+  }
+
   useEffect(()=>{
     getResults()
   }, [])
@@ -114,7 +198,13 @@ const App = () => {
   }, [qualiResults, raceResults])
 
   return (
-    <h1>test</h1>
+    <>
+      <h1>Standings</h1>
+      { standings
+        ? printStandings()
+        : null
+      }
+    </>
   )
 }
 
