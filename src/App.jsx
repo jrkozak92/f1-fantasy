@@ -5,6 +5,7 @@ const App = () => {
   const [raceResults, setRaceResults] = useState()
   const [qualiResults, setQualiResults] = useState()
   const [standings, setStandings] = useState()
+  const [status, setStatus] = useState("Loading...")
 
   const dnfCheck = (string) => {
     if (string === "Finished" || string.slice(-3) === "Lap"){
@@ -45,6 +46,16 @@ const App = () => {
       drivers: ["OCO", "GAS"]
     }
   }
+
+  const generateRegularDrivers = () => {
+    const signedDrivers = []
+    for (const constructor in constructors){
+      signedDrivers.concat(constructors[constructor].drivers)
+    }
+    return signedDrivers
+  }
+
+  const regularDrivers = generateRegularDrivers()
 
   const fantasyTeams = {
     brad: {
@@ -129,8 +140,41 @@ const App = () => {
     setQualiResults(season)
   }
 
-  const calcPoints = (driver) => {
+  const buildSessionFantasyTeams = (session) => {
+    console.log("Session @ build fantasy teams: ", session)
+    const driverCheck = [...regularDrivers]
+    const sessionDrivers = []
+    const subs = []
+    for (const driver in session) {
+      const driverIndex = driverCheck.indexOf(session[driver].driver.code)
+      if (driverIndex > -1){
+        const signedDriver = driverCheck.splice(driverIndex, 1)
+        sessionDrivers.push(signedDriver)
+      } else {
+        subs.push(driver)
+      }
+    }
+    // anyone left in driverCheck has a sub in the session
+    if (driverCheck.length === 0){
+      return fantasyTeams
+    } else {
+      const sessionTeams = {...JSON.parse(JSON.stringify(fantasyTeams))}
+      for (const driverOut in driverCheck){
+        for (const team in fantasyTeams){
+          const outDriverIndex = sessionTeams[team].drivers.includes(driverOut)
+          if (outDriverIndex > -1){
+            const subForDriverOut = subs.filter((sub, index) => {
+              return sub.constructor === driverOut.constructor
+            })[0]
+            sessionTeams[team].splice(outDriverIndex, 1, subForDriverOut)
+          }
+        }
+      }
+    }
     
+  }
+
+  const calcPoints = (driver) => {
     return (11 - driver.position) * 2
   }
 
@@ -140,17 +184,20 @@ const App = () => {
     if (raceResults?.length) {
       for (const race in raceResults){
         console.log("race", race)
+        buildSessionFantasyTeams(raceResults[race])
         for (const driver in raceResults[race]) {
           console.log("driver", raceResults[race][driver].driver)
+          const driversPointsThisRace = calcPoints(raceResults[race][driver])
           drivers[raceResults[race][driver].driver] 
-            ? drivers[raceResults[race][driver].driver]+= calcPoints(raceResults[race][driver])
-            : drivers[raceResults[race][driver].driver] = calcPoints(raceResults[race][driver])
+            ? drivers[raceResults[race][driver].driver]+= driversPointsThisRace
+            : drivers[raceResults[race][driver].driver] = driversPointsThisRace
         }
       }
     }
     if (qualiResults?.length){
       for (const session in qualiResults){
         console.log("quali")
+        buildSessionFantasyTeams(qualiResults[session])
         for (const driver in qualiResults[session]){
           console.log("quali driver", qualiResults[session][driver])
           drivers[qualiResults[session][driver].driver]
@@ -164,8 +211,13 @@ const App = () => {
   }
 
   const getResults = async () => {
-    await getQualiResults()
-    await getRaceResults()
+    try {
+      await getQualiResults()
+      await getRaceResults()
+    } catch (error) {
+      console.error("PROBZ: ", error)
+      setStatus("Something went wrong...")
+    }
   }
 
   const printStandings = () => {
@@ -181,8 +233,10 @@ const App = () => {
     return (
       <table>
         <thead>
-          <th>Driver</th>
-          <th>Points</th>
+          <tr>
+            <th>Driver</th>
+            <th>Points</th>
+          </tr>
         </thead>
         {...rows}
       </table>
@@ -195,14 +249,20 @@ const App = () => {
 
   useEffect(() => {
     generateStandings()
+    setStatus()
   }, [qualiResults, raceResults])
 
   return (
     <>
-      <h1>Standings</h1>
-      { standings
-        ? printStandings()
-        : null
+      {!status
+        ? <>
+          <h1>Standings</h1>
+          { standings
+            ? printStandings()
+            : null
+          }
+        </>
+        : status
       }
     </>
   )
